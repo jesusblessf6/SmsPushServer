@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+    <script src="/socket.io/socket.io.js"></script>
+	<script>
+	  var socket = io.connect('http://localhost');
+	  socket.on('news', function (data) {
+	    console.log(data);
+	    socket.emit('my other event', { my: 'data' });
+	  });
+    socket.on('broadcast data', function(data){
+      var inbox = document.getElementById('inMsg');
+      inbox.value = data.content;
+
+    });
+
+    function send_message(){
+      var content = document.getElementById("msg").value;
+      socket.emit('broadcast a message', {'content' : content});
+    }
+	</script>
+  </head>
+  <body>
+    <h1><%= title %></h1>
+    <input type="text" id="msg" name="smg" style="width:200px;">
+    <br>
+    <button id="send" name="send" onclick="send_message()">发送</button>
+    <textarea id="inMsg" name="inMsg"></textarea>
+  </body>
+</html>
