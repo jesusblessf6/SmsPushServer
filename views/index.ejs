@@ -5,15 +5,16 @@
     <link rel='stylesheet' href='/stylesheets/style.css' />
     <script src="/socket.io/socket.io.js"></script>
 	<script>
-	  var socket = io.connect('http://172.20.68.162');
-	  socket.on('news', function (data) {
-	    console.log(data);
-	    socket.emit('my other event', { my: 'data' });
+	  var socket = io.connect('http://172.20.67.217:3000');
+	  socket.on('connected', function (data) {
+	    //console.log(data);
+	    //socket.emit('my other event', { my: 'data' });
+      document.getElementById('tmp').innerText = data.hello;
 	  });
 	</script>
   </head>
   <body>
     <h1><%= title %></h1>
-    <p>Welcome to <%= title %></p>
+    <p id="tmp" name="tmp">Welcome to <%= title %></p>
   </body>
 </html>

@@ -4,8 +4,7 @@
  */
 
 var express = require('express');
-var routes = require('./routes');
-var index = require('./routes/index');
+
 var http = require('http');
 var path = require('path');
 
@@ -28,23 +27,17 @@ if ('development' == app.get('env')) {
   app.use(express.errorHandler());
 }
 
-app.get('/', routes.index);
-app.get('/sendMsg', index.sendMsg);
+//route the pages
+var index = require('./routes/index');
+index(app);
 
+//init the web socket
 var server = http.createServer(app);
 var io = require('socket.io').listen(server);
 server.listen(app.get('port'), function(){
-  console.log('Express server listening on port ' + app.get('port'));
+  	console.log('Express server listening on port ' + app.get('port'));
 });
 
-io.sockets.on('connection', function (socket) {
-  socket.emit('news', { hello: 'world' });
-  socket.on('my other event', function (data) {
-    console.log(data);
-  });
-
-  socket.on('broadcast a message', function(data){
-	io.sockets.emit('broadcast data', data);
-  });
-});
-
+//handle the socket event
+var listener = require('./routes/socketListener');
+listener(io);

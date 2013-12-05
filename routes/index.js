@@ -3,10 +3,13 @@
  * GET home page.
  */
 
-exports.index = function(req, res){
-  res.render('index', { title: 'Express' });
-};
+module.exports = function(app){
 
-exports.sendMsg = function(req, res){
-	res.render('sendMsg', {title: '发送消息'});
+	app.get('/', function(req, res){
+		res.render('index', { title: 'Express' });
+	});
+
+	app.get('/sendMsg', function(req, res){
+		res.render('sendMsg', {title: '发送消息'});
+	});
 };

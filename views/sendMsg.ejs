@@ -4,12 +4,17 @@
     <title><%= title %></title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap.min.css">
+    <script type="text/javascript" src="/javascripts/jquery-2.0.3.min.js"></script>
+    <script type="text/javascript" src="/javascripts/bootstrap.min.js"></script>
+    <script type="text/javascript" src="/javascripts/jquery.formatDateTime.min.js"></script>
 	<script>
-	  var socket = io.connect('http://172.20.68.162');
+	  var socket = io.connect('http://172.20.67.217:3000');
 	  socket.on('news', function (data) {
 	    console.log(data);
 	    socket.emit('my other event', { my: 'data' });
 	  });
+
     socket.on('broadcast data', function(data){
       var inbox = document.getElementById('inMsg');
       inbox.value = data.content;
@@ -18,7 +23,9 @@
 
     function send_message(){
       var content = document.getElementById("msg").value;
-      socket.emit('broadcast a message', {'content' : content});
+      var timestamp = $.formatDateTime("yy-m-d h:i:s", new Date());
+
+      socket.emit('broadcast a message', {'title' : "上海现货",'content' : content, 'timestamp' : timestamp});
     }
 	</script>
   </head>
