@@ -4,7 +4,7 @@
     <title><%= title %></title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
     <script src="/socket.io/socket.io.js"></script>
-	<script>
+    <script>
 	  var socket = io.connect('http://localhost:3000');
 	  
     socket.on('connected', function (data) {
@@ -12,16 +12,10 @@
 	    //socket.emit('my other event', { my: 'data' });
       document.getElementById('tmp').innerText = data.hello;
 	  });
-
-    
-
-	</script>
+    </script>
   </head>
   <body>
     <h1><%= title %></h1>
     <p id="tmp" name="tmp">Welcome to <%= title %></p>
-
-    <button id="testSql" name="testSql" onclick="test_sql()">测试连接</button>
-    <p><span id="test_result"></span></p>
   </body>
 </html>

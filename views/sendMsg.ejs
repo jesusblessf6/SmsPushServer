@@ -8,7 +8,7 @@
     <script type="text/javascript" src="/javascripts/jquery-2.0.3.min.js"></script>
     <script type="text/javascript" src="/javascripts/bootstrap.min.js"></script>
     <script type="text/javascript" src="/javascripts/jquery.formatDateTime.min.js"></script>
-	<script>
+    <script>
 	  var socket = io.connect('http://localhost:3000');
 	  socket.on('news', function (data) {
 	    console.log(data);
@@ -27,7 +27,7 @@
 
       socket.emit('broadcast a message', {'title' : "上海现货",'content' : content, 'timestamp' : timestamp});
     }
-	</script>
+    </script>
   </head>
   <body>
     <h1><%= title %></h1>

@@ -42,22 +42,22 @@ var listener = require('./routes/socketListener');
 listener(io);
 
 //test sql server connection
-var sql = require('./node_modules/msnodesql');
-var sql_settings = require('./sql_settings');
-console.log(sql_settings.conn_str);
+// var sql = require('./node_modules/msnodesql');
+// var sql_settings = require('./sql_settings');
+// console.log(sql_settings.conn_str);
 
-sql.open(sql_settings.conn_str, function (err, conn) {
-    if (err) {
-        console.log("Error opening the connection!" + err);
-        return;
-    }
-    conn.queryRaw("SELECT * FROM [Test].[dbo].[User]", function (err, results) {
-        if (err) {
-            console.log("Error running query!" + err + ";" + conn);
-            return;
-        }
-        for (var i = 0; i < results.rows.length; i++) {
-            console.log("0:" + results.rows[i][0] +":" + results.rows[i][1]);
-        }
-    });
-});
+// sql.open(sql_settings.conn_str, function (err, conn) {
+//     if (err) {
+//         console.log("Error opening the connection!" + err);
+//         return;
+//     }
+//     conn.queryRaw("SELECT * FROM [Test].[dbo].[User]", function (err, results) {
+//         if (err) {
+//             console.log("Error running query!" + err + ";" + conn);
+//             return;
+//         }
+//         for (var i = 0; i < results.rows.length; i++) {
+//             console.log("0:" + results.rows[i][0] +":" + results.rows[i][1]);
+//         }
+//     });
+// });

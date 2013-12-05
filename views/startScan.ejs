@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title><%= title %></title>
+	    <link rel='stylesheet' href='/stylesheets/style.css' />
+	    <script src="/socket.io/socket.io.js"></script>
+	    <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap.min.css">
+	    <script type="text/javascript" src="/javascripts/jquery-2.0.3.min.js"></script>
+	    <script type="text/javascript" src="/javascripts/bootstrap.min.js"></script>
+	    <script type="text/javascript" src="/javascripts/jquery.formatDateTime.min.js"></script>
+
+	    <script type="text/javascript">
+	    	var socket = io.connect('http://localhost:3000');
+	    	var isScanning = false;
+
+	    	// connected, if it is not scanning, run scan;
+	    	socket.on("connected", function(data){
+	    		socket.emit("username", {'phoneNum': "###########"});
+	    	});
+
+	    	socket.on('scanReg', function(data){
+	    		if(data.result == "ok"){
+	    			socket.emit("start scan", {scan: 'true'});
+	    			isScaning = true;
+	    		}
+
+	    		if(data.result == "existed"){
+	    			alert("扫描管理页面已经在别处打开，当前页面将被关闭");
+	    			document.close();
+	    		}
+	    	});
+
+	    	socket.on('scanEnd', function(data){
+	    		if(data.result == "ok"){
+	    			isScanning = false;
+	    			
+	    		}
+	    	});
+	    </script>
+	</head>
+
+	<body>
+		<div class="container text-center" style="margin-top: 200px;">
+			<h2>正在扫描发送消息</h2>
+		</div>
+	</body>
+
+</html>
