@@ -23,17 +23,17 @@
 	    			socket.emit("start scan", {scan: 'true'});
 	    			isScaning = true;
 	    		}
-
-	    		if(data.result == "existed"){
-	    			alert("扫描管理页面已经在别处打开，当前页面将被关闭");
-	    			document.close();
-	    		}
 	    	});
 
 	    	socket.on('scanEnd', function(data){
 	    		if(data.result == "ok"){
 	    			isScanning = false;
-	    			
+
+	    			// after 5 seconds, re-start the scan
+	    			setTimeout(function(){
+	    				socket.emit("start scan", {scan: 'true'});
+	    				isScaning = true;
+	    			}, 5000);	
 	    		}
 	    	});
 	    </script>
