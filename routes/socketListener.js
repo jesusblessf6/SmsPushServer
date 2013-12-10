@@ -6,6 +6,7 @@ module.exports = function(io){
 	var sentMsgs = new Array();
 	var noneSentMsgs = new Array();
 	var isScanning = false;
+	var async = require('async');
 
 	io.sockets.on('connection', function (socket) {
 
@@ -71,7 +72,7 @@ module.exports = function(io){
 	  	socket.on('start scan', function(data){
 
 	  		if(isScanning){
-	  			return;
+	  			socket.emit("scanEnd", {result : "notok"});
 	  		}
 	  		
 	  		isScanning = true;
@@ -79,130 +80,194 @@ module.exports = function(io){
 	  		var sql = require('../node_modules/msnodesql');
 	  		var sql_settings = require('../sql_settings');
 
-	  		sql.open(sql_settings.conn_str_from, function (err, conn) {
-	  			//console.log(sql_settings.conn_str_from + ":" + socket.id);
-	  			//console.log(peers);
-	  			if (err) {
-	  				console.log("Error opening the connection!" + err);
-	  				return;
+	  		
+	  		async.series(
+	  			[
+	  				function(callback){
+	  					sql.open(sql_settings.conn_str_from, function(err, conn){
+				
+						if (err) {
+							console.log("Error opening the connection!" + err);
+							return;
+						}
+
+						//execute the operations in series on the MetalSmsSend
+						async.series([
+							
+							//get all the app msg
+							function(callback){
+								conn.queryRaw("SELECT * FROM [MetalSmsSend].[dbo].[app_sms]", function (err, results){
+
+									if(err){
+										console.log(err);
+										return;
+									}
+									console.log(results.rows.length);
+									console.log("step1");
+									// handle the app msg one by one
+									async.eachSeries(results.rows, function(row, callback){
+										console.log("here");
+										var mobile = row[1];
+										console.log(mobile);
+										var msg = row[2];
+										var msg_id = row[0];
+										var timestamp = mom().format("YYYY-MM-DD HH:mm:ss");
+										console.log(timestamp);
+										var mid = row[4];
+										var sms_date = mom(row[3]).format("YYYY-MM-DD HH:mm:ss");
+
+										//find the socket by the mobile
+										var connectedMobiles = peers.filter(function(peer){
+											return peer.phoneNum == mobile;
+										});
+
+										// if find connected mobile, send it and put its id into "sentMsgIds";
+										// if not, put its id into "noneSentMsgIds"
+										if(connectedMobiles.length > 0){
+											async.eachSeries(connectedMobiles, function(mo, callback){
+												io.sockets.sockets[mo.socketId].emit("msg_in", 
+													{'title' : "上海同鑫：",'content' : msg, 'timestamp' : timestamp});
+												callback();
+											}, function(err){
+												if(err){
+													console.log(err);
+													return;
+												}
+												sentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+												console.log(sentMsgs);
+											});
+										}
+										else{
+											noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+										}
+
+										callback();
+									}, function(err){
+										if(err){console.log(err);}
+									});
+									
+									callback();
+								});
+							},
+
+							//handle the none-sent message
+							function(callback){
+								console.log("step2");
+								async.eachSeries(noneSentMsgs, function(nsm, callback){
+						
+			  						async.series([
+			  							function(callback){
+			  								console.log(nsm);
+					  						var queryStr = "insert into [MetalSmsSend].[dbo].[ProvideSms](Tel, Message, SendInt, Mid, AddDate) values('"+nsm.mobile+"', '"+nsm.msg+"', 0, '"+nsm.mid+"', '"+nsm.sms_date+"')";
+					  						console.log(queryStr);
+					  						conn.queryRaw(queryStr, 
+												function(error, results){
+													if(error){
+						  							console.log(error);
+						  							return;
+						  						}
+											});
+			  								callback();
+			  							},
+
+			  							//delete none-sent message from app_sms
+			  							function(callback){
+			  								queryStr = "delete from [MetalSmsSend].[dbo].[app_sms] where id = " + nsm.id;
+											console.log(queryStr);
+											conn.queryRaw(queryStr, 
+												function(error, results){
+													if(error){
+				  									console.log(error);
+				  									return;
+				  								}
+				  							});
+
+			  								callback();
+			  							}
+			  						], function(err){
+			  							if(err){
+			  								console.log(err);
+			  							}
+			  						});
+
+		  							callback();
+
+		  						}, callback);
+
+								callback();
+							},
+
+							//handle the sent message
+							function(callback){
+								console.log("step3");
+								async.eachSeries(sentMsgs, function(sm, callback){
+									var queryStr = "delete from [MetalSmsSend].[dbo].[app_sms] where id = " + sm.id;
+									console.log(queryStr);
+									
+									conn.queryRaw(queryStr, 
+										function(error, results){
+											if(error){
+						  					console.log(error);
+						  					return;
+						  				}
+						  			});
+
+									callback();
+								}, callback);
+								callback();
+							}
+							], function(err){});
+
+							callback();
+						});
+
+	  				},
+
+	  				function(callback){
+	  					sql.open(sql_settings.conn_str_to, function (err, conn2) {
+							console.log("step4");
+							if (err) {
+								console.log("Error opening the connection!" + err);
+								return;
+							}
+							console.log("here");
+							console.log(sentMsgs);
+
+							async.eachSeries(sentMsgs, function(sm, callback){
+								console.log("here");
+								var queryStr = "insert into [ShtxSmsHistory].[dbo].[h2012101](Tel, Message, SendInterFace, Mid, AddDate) values('"+sm.mobile+"', '"+sm.msg+"', 0, '"+sm.mid+"', '"+sm.sms_date+"')";
+								console.log(queryStr);
+								conn2.queryRaw(queryStr, 
+									function(error, results){
+										if(error){
+				  							console.log(error);
+				  							return;
+				  						}
+				  				});
+								callback();
+							}, function(err){
+								if(err) console.log(err);
+								callback();
+							});
+							
+						});
+
+	  				},
+
+
+	  				function(callback){
+						console.log("step5");
+						isScanning = false;
+						noneSentMsgs.length = 0;
+						sentMsgs.length = 0;
+						socket.emit("scanEnd", {result : "ok"});
+						callback();
+					}
+	  			], function(err){
+	  				if(err){console.log(err);}
 	  			}
-
-	  			conn.queryRaw("SELECT * FROM [MetalSmsSend].[dbo].[app_sms]", function (err, results) {
-	  				if(err){
-	  					console.log(err);
-	  					return;
-	  				}
-	  				console.log(results.rows.length);
-	  				for(var i = 0; i < results.rows.length; i ++){
-	  					var row = results.rows[i];
-	  					var mobile = row[1];
-	  					var msg = row[2];
-	  					var msg_id = row[0];
-	  					var timestamp = mom().format("YYYY-MM-DD HH:mm:ss");
-	  					console.log(timestamp);
-	  					var mid = row[4];
-	  					var sms_date = mom(row[3]).format("YYYY-MM-DD HH:mm:ss");
-
-	  					//find the socket by the mobile
-	  					var connectedMobiles = peers.filter(function(peer){
-	  						return peer.phoneNum == mobile;
-	  					});
-
-	  					// if find connected mobile, send it and put its id into "sentMsgIds";
-	  					// if not, put its id into "noneSentMsgIds"
-	  					if(connectedMobiles.length > 0){
-	  						//send message
-	  						for(var i = 0; i < connectedMobiles.length; i ++){
-	  							var m = connectedMobiles[i];
-	  							io.sockets.sockets[m.socketId].emit("msg_in", 
-	  								{'title' : "上海同鑫：",'content' : msg, 'timestamp' : timestamp});
-	  						}
-
-	  						sentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
-	  						//sentMsgs.push(row);
-	  					}else{
-	  						noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
-	  					}
-
-	  				}
-	  			});
-
-				//console.log("send end, the sent msgs: " + sentMsgs[0]);
-				//console.log("non-send message: " +noneSentMsgs[0] );
-
-				//move non-send message to provide msg table
-				//noneSentMsgs.forEach(function(element, index, array){
-				for(var i = 0; i < noneSentMsgs.length; i ++){
-					var element = noneSentMsgs[i];
-					console.log(element);
-					var queryStr = "insert into [MetalSmsSend].[dbo].[ProvideSms](Tel, Message, SendInt, Mid, AddDate) values('"+element.mobile+"', '"+element.msg+"', 0, '"+element.mid+"', '"+element.sms_date+"')";
-					console.log(queryStr);
-					conn.queryRaw(queryStr, 
-						function(error, results){
-							if(error){
-		  					console.log(error);
-		  					return;
-		  				}
-					});
-
-					queryStr = "delete from [MetalSmsSend].[dbo].[app_sms] where id = " + element.id;
-					console.log(queryStr);
-					conn.queryRaw(queryStr, 
-						function(error, results){
-							if(error){
-		  					console.log(error);
-		  					return;
-		  				}
-		  			});
-				}
-
-				//clear
-				noneSentMsgs = [];
-
-				//delete sent msg from app_sms
-				for(var i = 0; i < SentMsgs.length; i ++){
-					var ee = SentMsgs[i];
-					var queryStr = "delete from [MetalSmsSend].[dbo].[app_sms] where id = " + ee.id;
-					console.log(queryStr);
-					conn.queryRaw(queryStr, 
-						function(error, results){
-							if(error){
-		  					console.log(error);
-		  					return;
-		  				}
-		  			});
-				}
-	  		});
-
-			//put the sent msg into the history table
-			sql.open(sql_settings.conn_str_to, function (err, conn) {
-
-				if (err) {
-	  				console.log("Error opening the connection!" + err);
-	  				return;
-	  			}
-
-	  			//add sent msg to history
-	  			for(var i = 0; i < SentMsgs.length; i ++){
-	  				var element = SentMsgs[i];
-	  				var queryStr = "insert into [ShtxSmsHistory].[dbo].[h2012101](Tel, Message, SendInterFace, Mid, AddDate) values('"+element.mobile+"', '"+element.msg+"', 0, '"+element.mid+"', '"+element.sms_date+"')";
-	  				console.log(queryStr);
-					conn.queryRaw(queryStr, 
-						function(error, results){
-							if(error){
-		  					console.log(error);
-		  					return;
-		  				}
-		  			});
-	  			}
-			});
-
-	  		//end
-	  		isScanning = false;
-	  		socket.emit("scanEnd", {result : "ok"});
+	  		);
 	  	});
-
-
 
 	  	/*
 			on disconnected
