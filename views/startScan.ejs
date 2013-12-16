@@ -15,7 +15,7 @@
 
 	    	// connected, if it is not scanning, run scan;
 	    	socket.on("connected", function(data){
-	    		socket.emit("username", {'phoneNum': "###########"});
+	    		socket.emit("username", {'phoneNum': '<%= pageToken %>' });
 	    	});
 
 	    	socket.on('scanReg', function(data){
@@ -39,12 +39,85 @@
 	    			}, 5000);	
 	    		}
 	    	});
+
+	    	socket.on("init clients", function(data){
+	    		var clients = $('#clientList');
+	    		clients.empty();
+	    		for(var i = 0; i < data.length; i ++){
+	    			clients.append("<tr id='line"+data[i].phoneNum+"'><td id='phoneNum"+data[i].phoneNum+"'>"+data[i].phoneNum+"</td><td id=socketId'"+data[i].phoneNum+"'>"+data[i].socketId+"</td><td></td></tr>");
+	    		}
+	    	});
+
+	    	socket.on("update clients", function(data){
+	    		var clients = $('#clientList');
+	    		switch(data.action){
+	    			case "new":
+	    				clients.append("<tr id='line"+data.phoneNum+"'><td id='phoneNum"+data.phoneNum+"'>"+data.phoneNum+"</td><td id=socketId'"+data.phoneNum+"'>"+data.socketId+"</td><td></td></tr>");
+	    				break;
+
+	    			case "modify":
+	    				$('#socketId' + data.phoneNum).innerText = data.socketId;
+	    				break;
+
+	    			case "disconnect":
+	    				$('#line' + data.phoneNum).remove();
+	    				break;
+
+	    			default:
+	    				break;
+	    		}
+	    	});
+
+	    	socket.on("msg sent", function(data){
+	    		var msgs = $('#msgList');
+	    		var lines = $('#msgList tr');
+	    		var msgsLength = $('#msgList tr').length;
+	    		
+	    		for(var i = msgsLength-1 ; i >=14; i --){
+	    			lines[i].remove();
+	    		}
+
+	    		msgs.prepend("<tr><td>"+data.timestamp+"</td><td>"+data.phoneNum+"</td><td>"+data.content+"</td><td>"+data.status+"</td></tr>");
+	    	});
 	    </script>
 	</head>
 
-	<body>
-		<div class="container text-center" style="margin-top: 200px;">
+	<body style="margin-top: 0px; padding:0">
+		<div class="container">
 			<h2>正在扫描发送消息</h2>
+			<div class="col-md-5" style="margin-top:20px">
+				<div class="caption">
+					<h4>连接的客户端</h4>
+				</div>
+				<table class="table table-condensed table-striped table-hover">
+					<thead>
+						<tr>
+							<th>手机</th>
+							<th>socket id</th>
+							<th>操作</th>
+						</tr>
+					</thead>
+					<tbody id="clientList">
+
+					</tbody>
+				</table>
+			</div>
+			<div class="col-md-6 col-md-offset-1" style="margin-top:20px">
+				<div class="caption"><h4>发送记录(最近15条)</h4></div>
+				<table class="table table-condensed table-striped table-hover">
+					<thead>
+						<tr>
+							<th>时间</th>
+							<th>手机</th>
+							<th>消息</th>
+							<th>状态</th>
+						</tr>
+					</thead>
+					<tbody id="msgList">
+
+					</tbody>
+				</table>
+			</div>
 		</div>
 	</body>
 

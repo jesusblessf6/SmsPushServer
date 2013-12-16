@@ -7,6 +7,7 @@ module.exports = function(io){
 	var noneSentMsgs = new Array();
 	var isScanning = false;
 	var async = require('async');
+	var sysSettings = require('../system_settings');
 
 	io.sockets.on('connection', function (socket) {
 
@@ -22,25 +23,39 @@ module.exports = function(io){
 	  		console.log("on username:" + data.phoneNum +":" +socket.id);
 
 	  		//add to peers; if existed, then replace it with new socket id
-	  		var tt = peers.filter(function(e){
-  				return e.phoneNum == data.phoneNum;
-  			});
+	  		var existed = false;
+	  		var monitorClient = getMonitorClient(peers, io.sockets.sockets);
 
-  			if(tt.length > 0){
-  				peers.map(function(single){
-  					if(single.phoneNum == data.phoneNum){
-  						if(io.sockets.sockets[single.socketId])
-  						{
-  							io.sockets.sockets[single.socketId].disconnect();
-  						}
-  						single.socketId = socket.id;
-  					}
-  				});
-  			}else{
-  				peers.push({'phoneNum': data.phoneNum, 'socketId':socket.id});
-  			}
+	  		for(var i = peers.length -1; i >= 0; i --){
+	  			if(peers[i].phoneNum == data.phoneNum){
+	  				existed = true; // existed phoneNum, only update the socket
+	  				var sid = peers[i].socketId;
+	  				if(io.sockets.sockets[sid]){
+	  					io.sockets.sockets[sid].disconnect();
+	  				}
 
-  			if(data.phoneNum == "###########"){
+	  				if(peers[i]){
+	  					peers[i].socketId = socket.id;
+	  				}
+
+	  				if(monitorClient){
+	  					monitorClient.emit("update clients", {action: 'modify', phoneNum: data.phoneNum, socketId: socket.id});
+	  				}
+	  			}
+	  		}
+
+	  		//new client/phoneNum, add new socket
+	  		if(!existed){
+	  			peers.push({'phoneNum': data.phoneNum, 'socketId':socket.id});
+	  			if(monitorClient){
+	  				monitorClient.emit("update clients", {action: 'new', phoneNum: data.phoneNum, socketId: socket.id});
+	  			}
+	  		}
+
+	  		if(data.phoneNum == sysSettings.monitorToken ){
+	  			//init the client list
+	  			socket.emit("init clients", peers);
+
   				socket.emit("scanReg", {result: "ok"});
   			}
 	  	});
@@ -79,6 +94,7 @@ module.exports = function(io){
 
 	  		var sql = require('../node_modules/msnodesql');
 	  		var sql_settings = require('../sql_settings');
+	  		var monitorClient = getMonitorClient(peers, io.sockets.sockets);
 
 	  		
 	  		async.series(
@@ -125,8 +141,14 @@ module.exports = function(io){
 										// if not, put its id into "noneSentMsgIds"
 										if(connectedMobiles.length > 0){
 											async.eachSeries(connectedMobiles, function(mo, callback){
-												io.sockets.sockets[mo.socketId].emit("msg_in", 
-													{'title' : "上海同鑫：",'content' : msg, 'timestamp' : timestamp});
+												if(io.sockets.sockets[mo.socketId]){
+													io.sockets.sockets[mo.socketId].emit("msg_in", 
+														{'title' : "上海同鑫：",'content' : msg, 'timestamp' : timestamp});
+													if(monitorClient){
+														monitorClient.emit("msg sent", {content: msg, timestamp: timestamp, phoneNum: mo.phoneNum, status: "已发送"});
+													}
+												}
+												
 												callback();
 											}, function(err){
 												if(err){
@@ -139,6 +161,9 @@ module.exports = function(io){
 										}
 										else{
 											noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+											if(monitorClient){
+												monitorClient.emit("msg sent", {content: msg, timestamp: timestamp, phoneNum: mobile, status: "短信发送"});
+											}
 										}
 
 										callback();
@@ -274,6 +299,33 @@ module.exports = function(io){
 	  	*/
 	  	socket.on('disconnect', function(data){
 	  		console.log("disconnect: " + data);
+	  		var monitorClient = getMonitorClient(peers, io.sockets.sockets);
+
+	  		//disconnect, remove the client
+	  		for(var i = peers.length-1; i >= 0; i --){
+	  			if(peers[i].socketId == socket.id){
+	  				var pn = peers[i].phoneNum;
+	  				peers.splice(i, 1);
+	  				if(monitorClient){
+	  					monitorClient.emit("update clients", {action: "disconnect", phoneNum: pn, socketId: socket.id });
+	  				}
+	  			}
+	  		}
 	  	});
 	});			
 };
+
+function getMonitorClient(peers, sockets){
+	var sysSettings = require('../system_settings');
+	var filterdPeers = peers.filter(function(single, index, array){
+		return single.phoneNum == sysSettings.monitorToken;
+	});
+
+	for(var i = 0; i < filterdPeers.length; i ++){
+		if(sockets[filterdPeers[i].socketId]){
+			return sockets[filterdPeers[i].socketId];
+		}
+	}
+
+	return null;
+}

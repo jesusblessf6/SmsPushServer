@@ -3,6 +3,8 @@
  * GET home page.
  */
 
+var sys_settings = require('../system_settings');
+
 module.exports = function(app){
 
 	app.get('/', function(req, res){
@@ -14,6 +16,6 @@ module.exports = function(app){
 	});
 
 	app.get('/startScan', function(req, res){
-		res.render('startScan', {title: "扫描发送消息"});
+		res.render('startScan', {title: "扫描发送消息", pageToken: sys_settings.monitorToken});
 	});
 };
