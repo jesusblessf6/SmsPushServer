@@ -9,6 +9,7 @@
     "express": "3.4.5",
     "ejs": "*",
     "socket.io": "*",
-    "moment": "~2.4.0"
+    "moment": "~2.4.0",
+    "apnagent": "*"
   }
 }
