@@ -8,6 +8,10 @@ module.exports = function(io){
 	var isScanning = false;
 	var async = require('async');
 	var sysSettings = require('../system_settings');
+	var sql = require('../node_modules/msnodesql');
+	var sql_settings = require('../sql_settings_mock');
+	var Client = require('../models/client');
+	var OfflineMsg = require('../models/OfflineMsg');
 
 	io.sockets.on('connection', function (socket) {
 
@@ -21,6 +25,34 @@ module.exports = function(io){
 	  	// store the client info data = {phoneNum : ...}
 	  	socket.on('username', function(data){
 	  		console.log("on username:" + data.phoneNum +":" +socket.id);
+	  		if(data.token){
+	  			console.log(data.token);
+	  		}
+
+	  		var client = new Client({
+	  			phoneNum : data.phoneNum, 
+	  			platform : data.platform,
+	  			status : 1,
+	  			iosToken: data.iosToken,
+	  			connectTime : mom().format('X')
+	  		});
+	  		
+	  		client.save(function(err, data){
+	  			if(err){
+	  				console.log(err);
+	  				throw err;
+	  			}
+	  			else{
+	  				console.log("add a new client: ");
+	  				console.log(data);
+	  			}
+	  		});
+
+	  		// Client.get(data.phoneNum, function(err, c){
+	  		// 	if(err){console.log(err);}
+
+	  		// 	else{console.log(c);}
+	  		// });
 
 	  		//add to peers; if existed, then replace it with new socket id
 	  		var existed = false;
@@ -36,6 +68,8 @@ module.exports = function(io){
 
 	  				if(peers[i]){
 	  					peers[i].socketId = socket.id;
+	  					if(data.platform) peers[i].platform = data.platform;
+	  					if(data.iosToken) peers[i].iosToken = data.iosToken;
 	  				}
 
 	  				if(monitorClient){
@@ -57,6 +91,18 @@ module.exports = function(io){
 	  			socket.emit("init clients", peers);
 
   				socket.emit("scanReg", {result: "ok"});
+  			}
+  			else{
+  				console.log("hello herer");
+  				OfflineMsg.get(data.phoneNum, function(err, results){
+  					async.eachSeries(results, function(om, callback){
+
+  						socket.emit("msg_in",  {'title' : "上海同鑫：", 'content' : om.content, 'timestamp' : om.addDate});
+  						OfflineMsg.delete(om._id, function(err){console.log(err);});
+  						callback();
+
+  					});
+  				});
   			}
 	  	});
 
@@ -92,8 +138,7 @@ module.exports = function(io){
 	  		
 	  		isScanning = true;
 
-	  		var sql = require('../node_modules/msnodesql');
-	  		var sql_settings = require('../sql_settings');
+	  		
 	  		var monitorClient = getMonitorClient(peers, io.sockets.sockets);
 
 	  		
@@ -144,6 +189,12 @@ module.exports = function(io){
 												if(io.sockets.sockets[mo.socketId]){
 													io.sockets.sockets[mo.socketId].emit("msg_in", 
 														{'title' : "上海同鑫：",'content' : msg, 'timestamp' : timestamp});
+
+													if(mo.platform == "iOS" && mo.iosToken){
+														var sender = require('../apn/apnHandler');
+														sender.sendMessage(msg, mo.iosToken);
+													}
+
 													if(monitorClient){
 														monitorClient.emit("msg sent", {content: msg, timestamp: timestamp, phoneNum: mo.phoneNum, status: "已发送"});
 													}
@@ -160,7 +211,40 @@ module.exports = function(io){
 											});
 										}
 										else{
-											noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+											Client.get(mobile, function(err, result){
+
+												if(err){
+													console.log(err);
+												}
+
+												if(result && result.platform == "iOS" && result.iosToken){
+													var sender = require('../apn/apnHandler');
+													sender.sendMessage(msg, mo.iosToken);
+													sentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+
+													//it's a offline message, so put it into the mongo offline msgs
+													var offline = new OfflineMsg({
+														phoneNum : mobile,
+														content : msg,
+														addDate : sms_date,
+														timestamp : mom().format('X')
+													});
+
+													
+													offline.save(function(err, msgObj){
+														
+														if(err){
+															console.log(err);
+															
+														}
+													});
+
+												}
+												else{
+													noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+												}
+											});
+											//noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
 											if(monitorClient){
 												monitorClient.emit("msg sent", {content: msg, timestamp: timestamp, phoneNum: mobile, status: "短信发送"});
 											}

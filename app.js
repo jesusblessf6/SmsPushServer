@@ -40,3 +40,6 @@ server.listen(app.get('port'), function(){
 //handle the socket event
 var listener = require('./routes/socketListener');
 listener(io);
+
+var apnHandler = require('./apn/apnHandler');
+apnHandler.init(app);

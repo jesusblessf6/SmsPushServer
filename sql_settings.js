@@ -4,6 +4,7 @@ server connection info
 
 var driver = 'SQL Server Native Client 11.0';
 var server = "172.20.67.213";
+
 var user = "shoucao";
 var pwd = "shoucao";
 var databaseFrom = "MetalSmsSend";
