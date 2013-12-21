@@ -37,28 +37,28 @@ exports.init = function(app){
     });
 };
 
-exports.sendMessage = function(msg, token){
+exports.sendMessage = function(msg, token, callback){
 	console.log("sending message: " + msg + " to token: " + token);
 	agent.createMessage()
   		.device(token)
   		.alert(msg)
+      .badge(1)
+      .sound('sound.caf')
   		.send(function (err) {
       		// handle apnagent custom errors
       		if (err && err.toJSON) {
-        		//res.json(400, { error: err.toJSON(false) });
-        		console.log(err);
+        		callback(err);
       		} 
 
       		// handle anything else (not likely)
       		else if (err) {
-        		//res.json(400, { error: err.message });
-        		console.log(err);
+        		callback(err);
       		}
 
       		// it was a success
       		else {
-        		//res.json({ success: true });
-        		console.log("success"); 
+            console.log("send message succeed");
+        		callback(null);
       		}
     	});
 };
