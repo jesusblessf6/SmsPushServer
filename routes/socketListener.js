@@ -9,7 +9,7 @@ module.exports = function(io){
 	var async = require('async');
 	var sysSettings = require('../system_settings');
 	var sql = require('../node_modules/msnodesql');
-	var sql_settings = require('../sql_settings_mock');
+	var sql_settings = require('../sql_settings');
 	var Client = require('../models/client');
 	var OfflineMsg = require('../models/OfflineMsg');
 
@@ -191,10 +191,12 @@ module.exports = function(io){
 										console.log(mobile);
 										var msg = row[2];
 										var msg_id = row[0];
-										var timestamp = mom().tz("Asia/Shanghai").format("YYYY-MM-DD HH:mm:ss");
+										var timestamp = mom().zone(0).format("YYYY-MM-DD HH:mm:ss");
 										console.log(timestamp);
 										var mid = row[4];
-										var sms_date = mom(row[3]).tz("Asia/Shanghai").format("YYYY-MM-DD HH:mm:ss");
+										console.log(row[3]);
+										console.log(mom(row[3]).zone());
+										var sms_date = mom(row[3]).zone(0).format("YYYY-MM-DD HH:mm:ss");
 										var connectedMobiles;
 										console.log("app_msm init");
 
