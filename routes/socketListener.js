@@ -42,7 +42,7 @@ module.exports = function(io){
 			  			platform : data.platform,
 			  			status : 1,
 			  			iosToken: data.iosToken,
-			  			connectTime : mom().tz("Asia/Shanghai").format('X')
+			  			connectTime : mom().zone(0).format('X')
 			  		});
 			  		
 			  		client.save(function(err, data){
@@ -286,7 +286,7 @@ module.exports = function(io){
 																				phoneNum : mobile,
 																				content : msg,
 																				addDate : sms_date,
-																				timestamp : mom().tz("Asia/Shanghai").format('X')
+																				timestamp : mom().zone(0).format('X')
 																			});
 
 																			console.log("create offline msg: ");
