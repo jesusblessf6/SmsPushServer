@@ -12,7 +12,7 @@ module.exports = function(io){
 	var sql_settings = require('../sql_settings_mock');
 	var Client = require('../models/client');
 	var OfflineMsg = require('../models/OfflineMsg');
-
+	var SentMsg = require('../models/sentMsg');
 
 	io.sockets.on('connection', function (socket) {
 
@@ -452,6 +452,20 @@ module.exports = function(io){
 
 						async.eachSeries(sentMsgs, function(sm, callback){
 							console.log("here");
+
+							var sentMsg = new SentMsg({
+			  					phoneNum : sm.mobile,
+			  					content : sm.msg,
+			  					addDate : sm.sms_date,
+			  					timestamp : mom().zone(0).format('X')
+			  				});
+
+			  				sentMsg.save(function(err, result){
+			  					if(err){
+			  						console.log(err);
+			  					}
+			  				});
+
 							var queryStr = "insert into [ShtxSmsHistory].[dbo].[" + sql_settings.getHistoryDBName() + "](Tel, Message, SendInterFace, Mid, AddDate, Flag) values('"+sm.mobile+"', '"+sm.msg+"', 0, '"+sm.mid+"', '"+sm.sms_date+"', 'True')";
 							console.log(queryStr);
 							conn2.queryRaw(queryStr, 
@@ -462,6 +476,7 @@ module.exports = function(io){
 			  						callback();
 			  					}
 			  				);
+
 						}, function(err){
 							if(err) {
 								console.log(err);
