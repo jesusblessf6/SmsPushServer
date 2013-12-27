@@ -9,7 +9,7 @@ module.exports = function(io){
 	var async = require('async');
 	var sysSettings = require('../system_settings');
 	var sql = require('../node_modules/msnodesql');
-	var sql_settings = require('../sql_settings');
+	var sql_settings = require('../sql_settings_mock');
 	var Client = require('../models/client');
 	var OfflineMsg = require('../models/OfflineMsg');
 
@@ -452,7 +452,7 @@ module.exports = function(io){
 
 						async.eachSeries(sentMsgs, function(sm, callback){
 							console.log("here");
-							var queryStr = "insert into [ShtxSmsHistory].[dbo].[h2012101](Tel, Message, SendInterFace, Mid, AddDate) values('"+sm.mobile+"', '"+sm.msg+"', 0, '"+sm.mid+"', '"+sm.sms_date+"')";
+							var queryStr = "insert into [ShtxSmsHistory].[dbo].[" + sql_settings.getHistoryDBName() + "](Tel, Message, SendInterFace, Mid, AddDate, Flag) values('"+sm.mobile+"', '"+sm.msg+"', 0, '"+sm.mid+"', '"+sm.sms_date+"', 'True')";
 							console.log(queryStr);
 							conn2.queryRaw(queryStr, 
 								function(error, results){
@@ -512,6 +512,10 @@ module.exports = function(io){
 
 	  	socket.on('manually disconnect', function(data){
 	  		io.sockets.sockets[data.socketId].disconnect();
+	  	});
+
+	  	socket.on('disconnect me', function(data){
+	  		socket.disconnect();
 	  	});
 	});			
 };

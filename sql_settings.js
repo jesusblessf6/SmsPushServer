@@ -24,3 +24,9 @@ exports.driver = driver;
 // Here's a complete connection string which can be shared by multiple tests...
 exports.conn_str_from = conn_str_from;
 exports.conn_str_to = conn_str_to;
+
+exports.getHistoryDBName = function(){
+	var mom = require('moment');
+	var dateStr = mom().format('YYYYM');
+	return "h" + dateStr + "1";
+};
