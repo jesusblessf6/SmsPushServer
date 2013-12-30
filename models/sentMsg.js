@@ -18,7 +18,7 @@ SentMsg.prototype.save = function(callback){
 		timestamp : this.timestamp
 	};
 
-	conn.collection('sendMsgs').insert(offlineMsg, function(err, m){
+	conn.collection('sentMsgs').insert(sentMsg, function(err, m){
 
 		if(err){
 			return callback(err);
