@@ -32,10 +32,6 @@ module.exports = function(io){
 	  		async.series([
 
 	  			function(callback){
-	  				//console.log("on username:" + data.phoneNum +":" +socket.id + ":" + data.platform + ":" + data.iosToken);
-			  		//if(data.token){
-			  		//	console.log(data.token);
-			  		//}
 
 			  		var client = new Client({
 			  			phoneNum : data.phoneNum, 
@@ -188,6 +184,8 @@ module.exports = function(io){
 
 										console.log("here");
 										var mobile = row[1];
+										var tmpa = mobile.split("-");
+										var realMobile = tmpa[0];
 										console.log(mobile);
 										var msg = row[2];
 										var msg_id = row[0];
@@ -205,7 +203,7 @@ module.exports = function(io){
 											function(callback){
 												//find the socket by the mobile
 												connectedMobiles = peers.filter(function(peer){
-													return peer.phoneNum == mobile;
+													return peer.phoneNum == realMobile;
 												});
 												console.log("filter mobile");
 												callback();
@@ -243,7 +241,7 @@ module.exports = function(io){
 															console.log(err);
 															return;
 														}
-														sentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+														sentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date, 'realMobile' : realMobile});
 														console.log(sentMsgs);
 														callback();
 													});
@@ -253,7 +251,7 @@ module.exports = function(io){
 													async.series([
 
 														function(callback){
-															Client.get(mobile, function(err, result){
+															Client.get(realMobile, function(err, result){
 
 																console.log('offline ios device');
 																if(err){
@@ -276,14 +274,14 @@ module.exports = function(io){
 
 																		function(callback){
 																			console.log("push to sent msg");
-																			sentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+																			sentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date, 'realMobile' : realMobile});
 																			callback();
 																		},
 
 																		function(callback){
 																			//it's a offline message, so put it into the mongo offline msgs
 																			var offline = new OfflineMsg({
-																				phoneNum : mobile,
+																				phoneNum : realMobile,
 																				content : msg,
 																				addDate : sms_date,
 																				timestamp : mom().zone(0).format('X')
@@ -309,7 +307,7 @@ module.exports = function(io){
 																	});
 																}
 																else{
-																	noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+																	noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date, 'realMobile' : realMobile});
 																	callback();
 																}
 
