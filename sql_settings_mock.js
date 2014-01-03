@@ -30,3 +30,9 @@ exports.getHistoryDBName = function(){
 	var dateStr = mom().format('YYYYM');
 	return "h" + dateStr + "1";
 };
+
+exports.getHistoryDBNameWithDate = function(d){
+	var mom = require('moment');
+	var dateStr = mom(d).format('YYYYM');
+	return "h" + dateStr + "1";
+};

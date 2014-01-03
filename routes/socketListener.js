@@ -146,12 +146,12 @@ module.exports = function(io){
 	  	//start scan
 	  	socket.on('start scan', function(data){
 
-	  		if(isScanning){
-	  			socket.emit("scanEnd", {result : "notok"});
-	  			return;
-	  		}
+	  		// if(isScanning){
+	  		// 	socket.emit("scanEnd", {result : "notok"});
+	  		// 	return;
+	  		// }
 	  		
-	  		isScanning = true;
+	  		// isScanning = true;
 	  		var monitorClient = getMonitorClient(peers, io.sockets.sockets);
 	  		
 	  		async.series([
@@ -161,7 +161,7 @@ module.exports = function(io){
   					sql.open(sql_settings.conn_str_from, function(err, conn){
 			
 						if (err) {
-							throw err;
+							console.log(err);
 						}
 
 						//execute the operations in series on the MetalSmsSend
@@ -173,7 +173,7 @@ module.exports = function(io){
 								conn.queryRaw("SELECT * FROM [MetalSmsSend].[dbo].[app_sms]", function (err, results){
 
 									if(err){
-										throw err;
+										console.log(err);
 									}
 
 									//console.log(results.rows.length);
@@ -225,7 +225,7 @@ module.exports = function(io){
 																var sender = require('../apn/apnHandler');
 																sender.sendMessage(msg, mo.iosToken, function(err){
 																	if(err){
-																		throw err;
+																		console.log(err);
 																	}
 																});
 															}
@@ -255,7 +255,7 @@ module.exports = function(io){
 
 																console.log('offline ios device');
 																if(err){
-																	throw err;
+																	console.log(err);
 																}
 
 																if(result && result.platform == "iOS" && result.iosToken){
@@ -266,7 +266,7 @@ module.exports = function(io){
 																			var sender = require('../apn/apnHandler');
 																			sender.sendMessage(msg, result.iosToken, function(err){
 																				if(err){
-																					throw err;
+																					console.log(err);
 																				}
 																				callback();
 																			});
@@ -293,7 +293,7 @@ module.exports = function(io){
 																			offline.save(function(err, msgObj){
 																				
 																				if(err){
-																					throw err;
+																					console.log(err);
 																				}
 
 																				callback();
@@ -301,7 +301,7 @@ module.exports = function(io){
 																		}
 																	], function(err){
 																		if(err){
-																			throw err;
+																			console.log(err);
 																		}
 																		callback();
 																	});
@@ -324,7 +324,7 @@ module.exports = function(io){
 
 													], function(err){
 														if(err){
-															throw err;
+															console.log(err);
 														}
 														callback();
 													});
@@ -333,14 +333,14 @@ module.exports = function(io){
 
 										], function(err){
 											if(err){
-												throw err;
+												console.log(err);
 											}
 											callback();
 										});
 
 									}, function(err){
 										if(err){
-											throw err;
+											console.log(err);
 										}
 										callback();
 									});
@@ -363,7 +363,7 @@ module.exports = function(io){
 					  						conn.queryRaw(queryStr, 
 												function(error, results){
 													if(error){
-						  								throw error;
+						  								console.log(error);
 						  							}
 						  							callback();
 												}
@@ -378,7 +378,7 @@ module.exports = function(io){
 											conn.queryRaw(queryStr, 
 												function(error, results){
 													if(error){
-				  										throw error;
+				  										console.log(error);
 				  									}
 				  									callback();
 				  								}
@@ -387,14 +387,14 @@ module.exports = function(io){
 
 			  						], function(err){
 			  							if(err){
-			  								throw err;
+			  								console.log(err);
 			  							}
 			  							callback();
 			  						});
 
 		  						}, function(err){
 		  							if(err){
-		  								throw err;
+		  								console.log(err);
 		  							}
 		  							callback();
 		  						});
@@ -410,7 +410,7 @@ module.exports = function(io){
 									conn.queryRaw(queryStr, 
 										function(error, results){
 											if(error){
-						  						throw error;
+						  						console.log(error);
 						  					}
 						  					callback();
 						  				}
@@ -419,7 +419,7 @@ module.exports = function(io){
 									
 								}, function(err){
 									if(err){
-										throw err;
+										console.log(err);
 									}
 									callback();
 								});
@@ -428,7 +428,7 @@ module.exports = function(io){
 
 						], function(err){
 							if(err){
-								throw err;
+								console.log(err);
 							}
 							callback();
 						});
@@ -443,7 +443,7 @@ module.exports = function(io){
 						console.log("step4");
 						if (err) {
 							console.log("Error opening the connection!" + err);
-							throw err;
+//							throw err;
 						}
 						console.log("here");
 						console.log(sentMsgs);
@@ -464,12 +464,13 @@ module.exports = function(io){
 			  					}
 			  				});
 
-							var queryStr = "insert into [ShtxSmsHistory].[dbo].[" + sql_settings.getHistoryDBName() + "](Tel, Message, SendInterFace, Mid, AddDate, Flag) values('"+sm.mobile+"', '"+sm.msg+"', 0, '"+sm.mid+"', '"+sm.sms_date+"', 'True')";
+							var queryStr = "insert into [ShtxSmsHistory].[dbo].[" + sql_settings.getHistoryDBNameWithDate(sm.sms_date) + "](Tel, Message, SendInterFace, Mid, AddDate, Flag) values('"+sm.mobile+"', '"+sm.msg+"', 0, '"+sm.mid+"', '"+sm.sms_date+"', 'True')";
 							console.log(queryStr);
 							conn2.queryRaw(queryStr, 
 								function(error, results){
 									if(error){
-			  							throw error;
+			  							//throw error;
+			  							console.log(error);
 			  						}
 			  						callback();
 			  					}
@@ -478,7 +479,7 @@ module.exports = function(io){
 						}, function(err){
 							if(err) {
 								console.log(err);
-								throw err;
+								//throw err;
 							}
 
 							callback();
