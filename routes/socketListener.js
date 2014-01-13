@@ -9,7 +9,7 @@ module.exports = function(io){
 	var async = require('async');
 	var sysSettings = require('../system_settings');
 	var sql = require('../node_modules/msnodesql');
-	var sql_settings = require('../sql_settings_mock');
+	var sql_settings = require('../sql_settings');
 	var Client = require('../models/client');
 	var OfflineMsg = require('../models/OfflineMsg');
 	var SentMsg = require('../models/sentMsg');
@@ -264,12 +264,24 @@ module.exports = function(io){
 
 																		function(callback){
 																			var sender = require('../apn/apnHandler');
-																			sender.sendMessage(msg, result.iosToken, function(err){
+																			var badgeNum = 1;
+																			console.log('badgeNum:' + badgeNum);
+																			if(result.nonSentNum){
+																				badgeNum = badgeNum + result.nonSentNum;
+																			}
+																			console.log('badgeNum:' + badgeNum);
+																			sender.sendMessage(msg, result.iosToken, badgeNum, function(err){
 																				if(err){
 																					console.log(err);
 																				}
+																				Client.updateBadgeNumber(result._id, badgeNum, function(err, result){
+																					if(err){
+																						console.log(err);
+																					}
+																				})
 																				callback();
 																			});
+
 																		},
 
 																		function(callback){
@@ -298,6 +310,14 @@ module.exports = function(io){
 
 																				callback();
 																			});
+																		},
+
+																		function(callback){
+																			//noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
+																			if(monitorClient){
+																				monitorClient.emit("msg sent", {content: msg, timestamp: sms_date, phoneNum: mobile, status: "APNS推送"});
+																			}
+																			callback();
 																		}
 																	], function(err){
 																		if(err){
@@ -308,6 +328,9 @@ module.exports = function(io){
 																}
 																else{
 																	noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date, 'realMobile' : realMobile});
+																	if(monitorClient){
+																		monitorClient.emit("msg sent", {content: msg, timestamp: sms_date, phoneNum: mobile, status: "短信发送"});
+																	}
 																	callback();
 																}
 
@@ -316,9 +339,9 @@ module.exports = function(io){
 
 														function(callback){
 															//noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
-															if(monitorClient){
-																monitorClient.emit("msg sent", {content: msg, timestamp: sms_date, phoneNum: mobile, status: "短信发送"});
-															}
+															// if(monitorClient){
+															// 	monitorClient.emit("msg sent", {content: msg, timestamp: sms_date, phoneNum: mobile, status: "短信发送"});
+															// }
 															callback();
 														}
 
@@ -363,7 +386,7 @@ module.exports = function(io){
 					  						conn.queryRaw(queryStr, 
 												function(error, results){
 													if(error){
-						  								console.log(error);
+						  								console.log(err);
 						  							}
 						  							callback();
 												}
@@ -378,7 +401,7 @@ module.exports = function(io){
 											conn.queryRaw(queryStr, 
 												function(error, results){
 													if(error){
-				  										console.log(error);
+				  										console.log(err);
 				  									}
 				  									callback();
 				  								}
@@ -443,7 +466,7 @@ module.exports = function(io){
 						console.log("step4");
 						if (err) {
 							console.log("Error opening the connection!" + err);
-//							throw err;
+							//throw err;
 						}
 						console.log("here");
 						console.log(sentMsgs);
@@ -464,12 +487,11 @@ module.exports = function(io){
 			  					}
 			  				});
 
-							var queryStr = "insert into [ShtxSmsHistory].[dbo].[" + sql_settings.getHistoryDBNameWithDate(sm.sms_date) + "](Tel, Message, SendInterFace, Mid, AddDate, Flag) values('"+sm.mobile+"', '"+sm.msg+"', 0, '"+sm.mid+"', '"+sm.sms_date+"', 'True')";
+							var queryStr = "insert into [SmsHistory].[dbo].[" + sql_settings.getHistoryDBNameWithDate(sm.sms_date) + "](Tel, Message, SendInterFace, Mid, AddDate, Flag, SendDate) values('"+sm.mobile+"', '"+sm.msg+"', 102, '"+sm.mid+"', '"+sm.sms_date+"', 'True', '"+sm.sms_date+"')";
 							console.log(queryStr);
 							conn2.queryRaw(queryStr, 
 								function(error, results){
 									if(error){
-			  							//throw error;
 			  							console.log(error);
 			  						}
 			  						callback();
@@ -492,7 +514,7 @@ module.exports = function(io){
 
   				function(callback){
 					console.log("step5");
-					isScanning = false;
+					//isScanning = false;
 					noneSentMsgs.length = 0;
 					sentMsgs.length = 0;
 					socket.emit("scanEnd", {result : "ok"});

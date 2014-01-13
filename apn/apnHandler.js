@@ -37,12 +37,12 @@ exports.init = function(app){
     });
 };
 
-exports.sendMessage = function(msg, token, callback){
+exports.sendMessage = function(msg, token, badgeNum, callback){
 	console.log("sending message: " + msg + " to token: " + token);
 	agent.createMessage()
   		.device(token)
   		.alert(msg)
-      .badge(1)
+      .badge(badgeNum)
       .sound('sound.caf')
   		.send(function (err) {
       		// handle apnagent custom errors

@@ -48,7 +48,7 @@ OfflineMsg.delete = function (id, callback){
 
 OfflineMsg.get = function(phoneNum, callback){
 
-	conn.collection('offlineMsgs').find({phoneNum : phoneNum}, {sort: {timestamp : -1}}).toArray(function(err, results){
+	conn.collection('offlineMsgs').find({phoneNum : phoneNum}, {sort: {addDate : -1}}).toArray(function(err, results){
 		if(err){
 			return callback(err);
 		}
