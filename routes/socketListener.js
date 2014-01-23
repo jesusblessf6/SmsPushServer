@@ -9,7 +9,7 @@ module.exports = function(io){
 	var async = require('async');
 	var sysSettings = require('../system_settings');
 	var sql = require('../node_modules/msnodesql');
-	var sql_settings = require('../sql_settings_mock');
+	var sql_settings = require('../sql_settings');
 	var Client = require('../models/client');
 	var OfflineMsg = require('../models/OfflineMsg');
 	var SentMsg = require('../models/sentMsg');
@@ -44,7 +44,6 @@ module.exports = function(io){
 			  		client.save(function(err, data){
 			  			if(err){
 			  				console.log(err);
-			  				//throw err;
 			  			}
 			  			else{
 			  				console.log("add a new client: ");
@@ -57,27 +56,32 @@ module.exports = function(io){
 
 	  			//add to peers; if existed, then replace it with new socket id
 	  			function(callback){
-	  				for(var i = peers.length -1; i >= 0; i --){
-			  			if(peers[i].phoneNum == data.phoneNum){
-			  				existed = true; // existed phoneNum, only update the socket
-			  				var sid = peers[i].socketId;
-			  				if(io.sockets.sockets[sid]){
-			  					io.sockets.sockets[sid].disconnect();
-			  				}
+	  			 	for(var i = peers.length -1; i >= 0; i --)
+	  			 	{
+			  	 		if(peers[i].phoneNum == data.phoneNum)
+			  	 		{
+			  	 			existed = true; // existed phoneNum, only update the socket
+			  	 			var sid = peers[i].socketId;
+			  	 			if(io.sockets.sockets[sid])
+			  	 			{
+			  	 				io.sockets.sockets[sid].disconnect();
+			  	 			}
 
-			  				if(peers[i]){
-			  					peers[i].socketId = socket.id;
-			  					if(data.platform) peers[i].platform = data.platform;
-			  					if(data.iosToken) peers[i].iosToken = data.iosToken;
-			  				}
+			  	 			if(peers[i]){
+			  	 				peers[i].socketId = socket.id;
+			  	 				if(data.platform) peers[i].platform = data.platform;
+			  	 				if(data.iosToken) peers[i].iosToken = data.iosToken;
+			  	 			}else{
+			  	 				peers.push({'phoneNum': data.phoneNum, 'socketId':socket.id, 'platform': data.platform, 'iosToken': data.iosToken});
+			  	 			}
 
-			  				if(monitorClient){
-			  					monitorClient.emit("update clients", {action: 'modify', phoneNum: data.phoneNum, socketId: socket.id});
-			  				}
-			  			}
-			  		}
-			  		callback();
-	  			},
+			  	 			if(monitorClient){
+			  	 				monitorClient.emit("update clients", {action: 'modify', phoneNum: data.phoneNum, socketId: socket.id});
+			  	 			}
+			  	 		}
+			  	 	}
+			  	 	callback();
+	  			 },
 
 	  			function(callback){
 	  				//new client/phoneNum, add new socket
@@ -87,6 +91,7 @@ module.exports = function(io){
 			  				monitorClient.emit("update clients", {action: 'new', phoneNum: data.phoneNum, socketId: socket.id});
 			  			}
 			  		}
+			  		console.log(peers);
 
 			  		callback();
 	  			},
@@ -95,16 +100,18 @@ module.exports = function(io){
 	  				if(data.phoneNum == sysSettings.monitorToken ){
 			  			//init the client list
 			  			socket.emit("init clients", peers);
-
 		  				socket.emit("scanReg", {result: "ok"});
 		  			}
 		  			else{
-		  				console.log("hello herer");
 		  				OfflineMsg.get(data.phoneNum, function(err, results){
 		  					async.eachSeries(results, function(om, callback){
 
 		  						socket.emit("msg_in",  {'title' : "上海同鑫：", 'content' : om.content, 'timestamp' : om.addDate});
-		  						OfflineMsg.delete(om._id, function(err){console.log(err);});
+		  						OfflineMsg.delete(om._id, function(err){
+		  							if(err){
+		  								console.log(err);
+		  							}
+		  						});
 		  						callback();
 
 		  					});
@@ -115,7 +122,9 @@ module.exports = function(io){
 	  			}
 
 	  		], function(err){
-	  			console.log(err);
+	  			if(err){
+	  				console.log(err);
+	  			}
 	  		});
 	  		
 	  	});
@@ -146,13 +155,9 @@ module.exports = function(io){
 	  	//start scan
 	  	socket.on('start scan', function(data){
 
-	  		// if(isScanning){
-	  		// 	socket.emit("scanEnd", {result : "notok"});
-	  		// 	return;
-	  		// }
-	  		
-	  		// isScanning = true;
 	  		var monitorClient = getMonitorClient(peers, io.sockets.sockets);
+	  		//console.log(peers);
+	  		//console.log(io.sockets.sockets); 
 	  		
 	  		async.series([
 
@@ -176,13 +181,9 @@ module.exports = function(io){
 										console.log(err);
 									}
 
-									//console.log(results.rows.length);
-									console.log("step1");
-
 									// handle the app msg one by one
 									async.eachSeries(results.rows, function(row, callback){
 
-										console.log("here");
 										var mobile = row[1];
 										var tmpa = mobile.split("-");
 										var realMobile = tmpa[0];
@@ -223,7 +224,7 @@ module.exports = function(io){
 																console.log("it's a ios device: " + msg);
 																console.log(mo.iosToken);
 																var sender = require('../apn/apnHandler');
-																sender.sendMessage(msg, mo.iosToken, function(err){
+																sender.sendMessage(msg, mo.iosToken, 1, function(err){
 																	if(err){
 																		console.log(err);
 																	}
@@ -242,7 +243,6 @@ module.exports = function(io){
 															return;
 														}
 														sentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date, 'realMobile' : realMobile});
-														console.log(sentMsgs);
 														callback();
 													});
 												}
@@ -313,7 +313,6 @@ module.exports = function(io){
 																		},
 
 																		function(callback){
-																			//noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
 																			if(monitorClient){
 																				monitorClient.emit("msg sent", {content: msg, timestamp: sms_date, phoneNum: mobile, status: "APNS推送"});
 																			}
@@ -338,10 +337,6 @@ module.exports = function(io){
 														},
 
 														function(callback){
-															//noneSentMsgs.push({'mobile': mobile, 'msg': msg, 'id': msg_id, 'mid': mid, 'sms_date': sms_date});
-															// if(monitorClient){
-															// 	monitorClient.emit("msg sent", {content: msg, timestamp: sms_date, phoneNum: mobile, status: "短信发送"});
-															// }
 															callback();
 														}
 
@@ -373,8 +368,7 @@ module.exports = function(io){
 
 							//handle the none-sent message
 							function(callback){
-								console.log("step2");
-
+								
 								async.eachSeries(noneSentMsgs, function(nsm, callback){
 						
 			  						async.series([
@@ -401,7 +395,7 @@ module.exports = function(io){
 											conn.queryRaw(queryStr, 
 												function(error, results){
 													if(error){
-				  										console.log(err);
+				  										console.log(error);
 				  									}
 				  									callback();
 				  								}
@@ -425,7 +419,7 @@ module.exports = function(io){
 
 							//handle the sent message
 							function(callback){
-								console.log("step3");
+								
 								async.eachSeries(sentMsgs, function(sm, callback){
 									var queryStr = "delete from [MetalSmsSend].[dbo].[app_sms] where id = " + sm.id;
 									console.log(queryStr);
@@ -463,16 +457,13 @@ module.exports = function(io){
   				function(callback){
 
   					sql.open(sql_settings.conn_str_to, function (err, conn2) {
-						console.log("step4");
+						
 						if (err) {
 							console.log("Error opening the connection!" + err);
 							//throw err;
 						}
-						console.log("here");
-						console.log(sentMsgs);
 
 						async.eachSeries(sentMsgs, function(sm, callback){
-							console.log("here");
 
 							var sentMsg = new SentMsg({
 			  					phoneNum : sm.mobile,
@@ -513,8 +504,7 @@ module.exports = function(io){
 
 
   				function(callback){
-					console.log("step5");
-					//isScanning = false;
+					
 					noneSentMsgs.length = 0;
 					sentMsgs.length = 0;
 					socket.emit("scanEnd", {result : "ok"});

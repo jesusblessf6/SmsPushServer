@@ -44,7 +44,7 @@
 	    		var clients = $('#clientList');
 	    		clients.empty();
 	    		for(var i = 0; i < data.length; i ++){
-	    			clients.append("<tr id='line"+data[i].phoneNum+"'><td id='phoneNum"+data[i].phoneNum+"'>"+data[i].phoneNum+"</td><td id=socketId'"+data[i].phoneNum+"'>"+data[i].socketId+"</td><td><button class='btn btn-link' style='font-size:12px; height:20px; padding:0; margin:0' disabled click=\"disconnnectById('"+data[i].socketId+"')\">断开</button></td></tr>");
+	    			clients.append("<tr id='line"+data[i].phoneNum+data[i].socketId+"'><td id='phoneNum"+data[i].phoneNum+data[i].socketId+"'>"+data[i].phoneNum+"</td><td id='socketId"+data[i].phoneNum+data[i].socketId+"'>"+data[i].socketId+"</td><td><button class='btn btn-link' style='font-size:12px; height:20px; padding:0; margin:0' disabled click=\"disconnnectById('"+data[i].socketId+"')\">断开</button></td></tr>");
 	    		}
 	    	});
 
@@ -52,15 +52,16 @@
 	    		var clients = $('#clientList');
 	    		switch(data.action){
 	    			case "new":
-	    				clients.append("<tr id='line"+data.phoneNum+"'><td id='phoneNum"+data.phoneNum+"'>"+data.phoneNum+"</td><td id=socketId'"+data.phoneNum+"'>"+data.socketId+"</td><td></td></tr>");
+	    			case "modify":
+	    				clients.append("<tr id='line"+data.phoneNum+data.socketId+"'><td id='phoneNum"+data.phoneNum+data.socketId+"'>"+data.phoneNum+"</td><td id='socketId"+data.phoneNum+data.socketId+"'>"+data.socketId+"</td><td></td></tr>");
 	    				break;
 
-	    			case "modify":
-	    				$('#socketId' + data.phoneNum).innerText = data.socketId;
-	    				break;
+	    			//case "modify":
+	    				//$('#socketId' + data.phoneNum+data.socketId).innerText = data.socketId;
+	    			//	break;
 
 	    			case "disconnect":
-	    				$('#line' + data.phoneNum).remove();
+	    				$('#line' + data.phoneNum+data.socketId).remove();
 	    				break;
 
 	    			default:
